@@ -348,9 +348,9 @@ class MultiPeriodOpt(SinglePeriodOpt):
 
     def get_trades(self, portfolio, t=pd.datetime.today()):
 
-        value = sum(portfolio)
+        value = sum(portfolio) # is not exactly 1 due to numerical precision
         assert (value > 0.)
-        w = cvx.Constant(portfolio.values / value)
+        w = cvx.Constant(portfolio.values / value) # slightly scale the weights, such that they sum up to exactly 1
 
         prob_arr = []
         z_vars = []
@@ -364,7 +364,7 @@ class MultiPeriodOpt(SinglePeriodOpt):
             # range(self.lookahead_periods)]:
 
             #            tau = t + delta_t
-            z = cvx.Variable(*w.size)
+            z = cvx.Variable(w.size) # removed "*" to fix code; "*" is missing in similar statement above
             wplus = w + z
             obj = self.return_forecast.weight_expr_ahead(t, tau, wplus)
 
