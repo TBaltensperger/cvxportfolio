@@ -1,21 +1,7 @@
 """
-Copyright (C) Enzo Busseti 2016-2019 
+Copyright 2016 Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
-Code written before September 2016 is copyrighted to 
-Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.,
-and is licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
@@ -137,11 +123,12 @@ class SimulationResult():
         """
         Concatenate initial portfolio and h_next dataframe.
 
-        Infers the timestamp of last element by increasing the final timestamp.
         """
+        tmp = self.h_next.copy()
+        tmp.loc['last'] = np.nan
         tmp = self.h_next.shift(1)
         tmp.iloc[0] = self.initial_portfolio
-        # TODO fix
+        # TODO fix ?
         # tmp.loc[self.h_next.index[-1] + self.timedelta]=self.h_next.iloc[-1]
         return tmp
 
@@ -191,7 +178,7 @@ class SimulationResult():
 
     @property
     def annual_growth_rate(self):
-        """The annualized growth rate PPY/T \sum_{t=1}^T log(v_{t+1}/v_t)
+        """The annualized growth rate PPY/T sum_{t=1}^T log(v_{t+1}/v_t)
         """
         return self.growth_rates.sum() * self.PPY / self.growth_rates.size
 

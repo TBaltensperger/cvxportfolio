@@ -1,21 +1,7 @@
 """
-Copyright (C) Enzo Busseti 2016-2019 
+Copyright 2016 Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
-Code written before September 2016 is copyrighted to 
-Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.,
-and is licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
@@ -29,6 +15,7 @@ limitations under the License.
 """
 
 from abc import ABCMeta, abstractmethod
+import datetime as dt
 import pandas as pd
 import numpy as np
 import logging
@@ -37,7 +24,7 @@ import cvxpy as cvx
 from cvxportfolio.costs import BaseCost
 from cvxportfolio.returns import BaseReturnsModel
 from cvxportfolio.constraints import BaseConstraint
-from cvxportfolio.utils.data_management import time_locator, null_checker
+from cvxportfolio.utils import values_in_time, null_checker
 
 
 __all__ = ['Hold', 'FixedTrade', 'PeriodicRebalance', 'AdaptiveRebalance',
@@ -45,16 +32,15 @@ __all__ = ['Hold', 'FixedTrade', 'PeriodicRebalance', 'AdaptiveRebalance',
            'RankAndLongShort']
 
 
-class BasePolicy(object):
+class BasePolicy(object, metaclass=ABCMeta):
     """ Base class for a trading policy. """
-    __metaclass__ = ABCMeta
 
     def __init__(self):
         self.costs = []
         self.constraints = []
 
     @abstractmethod
-    def get_trades(self, portfolio, t=pd.datetime.today()):
+    def get_trades(self, portfolio, t=dt.datetime.today()):
         """Trades list given current portfolio and time t.
         """
         return NotImplemented
@@ -65,14 +51,14 @@ class BasePolicy(object):
     def get_rounded_trades(self, portfolio, prices, t):
         """Get trades vector as number of shares, rounded to integers."""
         return np.round(self.get_trades(portfolio,
-                                        t) / time_locator(prices, t))[:-1]
+                                        t) / values_in_time(prices, t))[:-1]
 
 
 class Hold(BasePolicy):
     """Hold initial portfolio.
     """
 
-    def get_trades(self, portfolio, t=pd.datetime.today()):
+    def get_trades(self, portfolio, t=dt.datetime.today()):
         return self._nulltrade(portfolio)
 
 
@@ -86,8 +72,8 @@ class RankAndLongShort(BasePolicy):
         self.return_forecast = return_forecast
         super(RankAndLongShort, self).__init__()
 
-    def get_trades(self, portfolio, t=pd.datetime.today()):
-        prediction = time_locator(self.return_forecast, t, as_numpy=False)
+    def get_trades(self, portfolio, t=dt.datetime.today()):
+        prediction = values_in_time(self.return_forecast, t)
         sorted_ret = prediction.sort_values()
 
         short_trades = sorted_ret.index[:self.num_short]
@@ -119,7 +105,7 @@ class ProportionalTrade(BasePolicy):
         self.time_steps = time_steps
         super(ProportionalTrade, self).__init__()
 
-    def get_trades(self, portfolio, t=pd.datetime.today()):
+    def get_trades(self, portfolio, t=dt.datetime.today()):
         try:
             missing_time_steps = len(
                 self.time_steps) - next(i for (i, x)
@@ -135,7 +121,7 @@ class ProportionalTrade(BasePolicy):
 class SellAll(BasePolicy):
     """Sell all non-cash assets."""
 
-    def get_trades(self, portfolio, t=pd.datetime.today()):
+    def get_trades(self, portfolio, t=dt.datetime.today()):
         trade = -pd.Series(portfolio, copy=True)
         trade.ix[-1] = 0.
         return trade
@@ -148,17 +134,16 @@ class FixedTrade(BasePolicy):
     def __init__(self, tradevec=None, tradeweight=None):
         """Trade the tradevec vector (dollars) or tradeweight weights."""
         if tradevec is not None and tradeweight is not None:
-            raise(Exception(
-                'only one of tradevec and tradeweight can be passed'))
+            raise Exception
         if tradevec is None and tradeweight is None:
-            raise(Exception('one of tradevec and tradeweight must be passed'))
+            raise Exception
         self.tradevec = tradevec
         self.tradeweight = tradeweight
         assert(self.tradevec is None or sum(self.tradevec) == 0.)
         assert(self.tradeweight is None or sum(self.tradeweight) == 0.)
         super(FixedTrade, self).__init__()
 
-    def get_trades(self, portfolio, t=pd.datetime.today()):
+    def get_trades(self, portfolio, t=dt.datetime.today()):
         if self.tradevec is not None:
             return self.tradevec
         return sum(portfolio) * self.tradeweight
@@ -195,7 +180,7 @@ class PeriodicRebalance(BaseRebalance):
         self.last_t = t
         return result
 
-    def get_trades(self, portfolio, t=pd.datetime.today()):
+    def get_trades(self, portfolio, t=dt.datetime.today()):
         return self._rebalance(portfolio) if self.is_start_period(t) else \
             self._nulltrade(portfolio)
 
@@ -209,7 +194,7 @@ class AdaptiveRebalance(BaseRebalance):
         self.tracking_error = tracking_error
         super(AdaptiveRebalance, self).__init__()
 
-    def get_trades(self, portfolio, t=pd.datetime.today()):
+    def get_trades(self, portfolio, t=dt.datetime.today()):
         weights = portfolio / sum(portfolio)
         diff = (weights - self.target).values
 
@@ -259,7 +244,7 @@ class SinglePeriodOpt(BasePolicy):
         """
 
         if t is None:
-            t = pd.datetime.today()
+            t = dt.datetime.today()
 
         value = sum(portfolio)
         w = portfolio / value
@@ -270,7 +255,8 @@ class SinglePeriodOpt(BasePolicy):
             alpha_term = self.return_forecast.weight_expr(t, wplus)
         else:
             alpha_term = cvx.sum(cvx.multiply(
-                time_locator(self.return_forecast, t, as_numpy=True), wplus))
+                values_in_time(self.return_forecast, t).values,
+                wplus))
 
         assert(alpha_term.is_concave())
 
@@ -346,11 +332,11 @@ class MultiPeriodOpt(SinglePeriodOpt):
         self.terminal_weights = terminal_weights
         super(MultiPeriodOpt, self).__init__(*args, **kwargs)
 
-    def get_trades(self, portfolio, t=pd.datetime.today()):
+    def get_trades(self, portfolio, t=dt.datetime.today()):
 
-        value = sum(portfolio) # is not exactly 1 due to numerical precision
+        value = sum(portfolio)
         assert (value > 0.)
-        w = cvx.Constant(portfolio.values / value) # slightly scale the weights, such that they sum up to exactly 1
+        w = cvx.Constant(portfolio.values / value)
 
         prob_arr = []
         z_vars = []
@@ -364,7 +350,7 @@ class MultiPeriodOpt(SinglePeriodOpt):
             # range(self.lookahead_periods)]:
 
             #            tau = t + delta_t
-            z = cvx.Variable(w.size) # removed "*" to fix code; "*" is missing in similar statement above
+            z = cvx.Variable(*w.shape)
             wplus = w + z
             obj = self.return_forecast.weight_expr_ahead(t, tau, wplus)
 

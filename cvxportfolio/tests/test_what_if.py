@@ -1,21 +1,7 @@
 """
-Copyright (C) Enzo Busseti 2016-2019 
+Copyright 2016 Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
-Code written before September 2016 is copyrighted to 
-Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.,
-and is licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
@@ -63,7 +49,7 @@ class TestWhatIf(BaseTest):
             self.returns, name=i) for i in range(3)]
         weights = np.array([0.1, 0.3, 0.6])
         alpha_model = MultipleReturnsForecasts(alpha_sources, weights)
-        emp_Sigma = np.cov(self.returns.as_matrix().T)
+        emp_Sigma = np.cov(self.returns.to_numpy().T)
         risk_model = FullSigma(emp_Sigma, gamma=100.)
         tcost_model = TcostModel(self.volume, self.sigma, self.a, self.b)
         hcost_model = HcostModel(self.s, self.s * 0)
@@ -115,7 +101,7 @@ class TestWhatIf(BaseTest):
             self.returns, name=i) for i in range(3)]
         weights = np.array([0.1, 0.3, 0.6])
         alpha_model = MultipleReturnsForecasts(alpha_sources, weights)
-        emp_Sigma = np.cov(self.returns.as_matrix().T)
+        emp_Sigma = np.cov(self.returns.to_numpy().T)
         risk_model = FullSigma(emp_Sigma, gamma=100.)
         tcost_model = TcostModel(self.a, self.b, self.sigma, self.volume)
         hcost_model = HcostModel(self.s, self.s * 0)
@@ -171,7 +157,7 @@ class TestWhatIf(BaseTest):
             self.returns, name=i) for i in range(3)]
         weights = np.array([0.1, 0.3, 0.6])
         alpha_model = MultipleReturnsForecasts(alpha_sources, weights)
-        emp_Sigma = np.cov(self.returns.as_matrix().T)
+        emp_Sigma = np.cov(self.returns.to_numpy().T)
         risk_model = FullSigma(emp_Sigma)
         tcost_model = TcostModel(self.a, self.b, self.sigma, self.volume)
         hcost_model = HcostModel(self.s)

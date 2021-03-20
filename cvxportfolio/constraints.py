@@ -1,21 +1,7 @@
 """
-Copyright (C) Enzo Busseti 2016-2019
+Copyright 2016 Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
-Code written before September 2016 is copyrighted to 
-Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.,
-and is licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
@@ -33,9 +19,9 @@ from abc import ABCMeta, abstractmethod
 
 import cvxpy as cvx
 import numpy as np
-import pandas as pd
 
-from .risks import locator
+from .utils import values_in_time
+
 
 __all__ = ['LongOnly', 'LeverageLimit', 'LongCash', 'DollarNeutral', 'MaxTrade',
            'MaxWeights', 'MinWeights', 'FactorMaxLimit', 'FactorMinLimit',
@@ -85,9 +71,7 @@ class MaxTrade(BaseConstraint):
           v: portfolio value
         """
         return cvx.abs(z[:-1]) * v <= \
-            np.array(locator(self.ADVs, t)) * self.max_fraction
-
-        # TODO fix the locator for this usecase
+            np.array(values_in_time(self.ADVs, t)) * self.max_fraction
 
 
 class LongOnly(BaseConstraint):
@@ -125,11 +109,7 @@ class LeverageLimit(BaseConstraint):
           t: time
           w_plus: holdings
         """
-        if isinstance(self.limit, pd.Series):
-            limit = self.limit.loc[t]
-        else:
-            limit = self.limit
-        return cvx.norm(w_plus[:-1], 1) <= limit
+        return cvx.norm(w_plus[:-1], 1) <= values_in_time(self.limit, t)
 
 
 class LongCash(BaseConstraint):
@@ -184,11 +164,7 @@ class MaxWeights(BaseConstraint):
           t: time
           w_plus: holdings
         """
-        if isinstance(self.limit, pd.Series):
-            limit = self.limit.loc[t]
-        else:
-            limit = self.limit
-        return w_plus[:-1] <= limit
+        return w_plus[:-1] <= values_in_time(self.limit, t)
 
 
 class MinWeights(BaseConstraint):
@@ -209,11 +185,7 @@ class MinWeights(BaseConstraint):
           t: time
           w_plus: holdings
         """
-        if isinstance(self.limit, pd.Series):
-            limit = self.limit.loc[t]
-        else:
-            limit = self.limit
-        return w_plus[:-1] >= limit
+        return w_plus[:-1] >= values_in_time(self.limit, t)
 
 
 class FactorMaxLimit(BaseConstraint):
@@ -237,11 +209,8 @@ class FactorMaxLimit(BaseConstraint):
             t: time
             w_plus: holdings
         """
-        if isinstance(self.limit, pd.Series):
-            limit = self.limit.loc[t]
-        else:
-            limit = self.limit
-        return self.factor_exposure.T * w_plus[:-1] <= limit
+        return values_in_time(self.factor_exposure, t).T * w_plus[:-1] <= \
+            values_in_time(self.limit, t)
 
 
 class FactorMinLimit(BaseConstraint):
@@ -265,11 +234,8 @@ class FactorMinLimit(BaseConstraint):
             t: time
             w_plus: holdings
         """
-        if isinstance(self.limit, pd.Series):
-            limit = self.limit.loc[t]
-        else:
-            limit = self.limit
-        return self.factor_exposure.T * w_plus[:-1] >= limit
+        return values_in_time(self.factor_exposure, t).T * w_plus[:-1] >= \
+            values_in_time(self.limit, t)
 
 
 class FixedAlpha(BaseConstraint):
@@ -287,8 +253,5 @@ class FixedAlpha(BaseConstraint):
         self.alpha_target = alpha_target
 
     def _weight_expr(self, t, w_plus, z, v):
-        if isinstance(self.alpha_target, pd.Series):
-            alpha_target = self.alpha_target.loc[t]
-        else:
-            alpha_target = self.alpha_target
-        return self.return_forecast.T * w_plus[:-1] == alpha_target
+        return values_in_time(self.return_forecast, t).T * w_plus[:-1] == \
+            values_in_time(self.alpha_target, t)

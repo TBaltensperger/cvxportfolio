@@ -1,21 +1,7 @@
 """
-Copyright (C) Enzo Busseti 2016-2019 
+Copyright 2016 Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
-Code written before September 2016 is copyrighted to 
-Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.,
-and is licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
@@ -31,7 +17,7 @@ limitations under the License.
 
 import cvxpy as cvx
 from cvxportfolio.expression import Expression
-from .utils.data_management import time_locator, null_checker
+from .utils import values_in_time, null_checker
 
 __all__ = ['ReturnsForecast', 'MPOReturnsForecast',
            'MultipleReturnsForecasts']
@@ -70,9 +56,9 @@ class ReturnsForecast(BaseReturnsModel):
           An expression for the alpha.
         """
         alpha = cvx.multiply(
-            time_locator(self.returns, t, as_numpy=True), wplus)
+            values_in_time(self.returns, t), wplus)
         alpha -= cvx.multiply(
-            time_locator(self.delta, t, as_numpy=True), cvx.abs(wplus))
+            values_in_time(self.delta, t), cvx.abs(wplus))
         return cvx.sum(alpha)
 
     def weight_expr_ahead(self, t, tau, wplus):

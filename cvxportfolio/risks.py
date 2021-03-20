@@ -1,21 +1,7 @@
 """
-Copyright (C) Enzo Busseti 2016-2019 
+Copyright 2016 Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-
-Code written before September 2016 is copyrighted to 
-Stephen Boyd, Enzo Busseti, Steven Diamond, BlackRock Inc.,
-and is licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
@@ -29,32 +15,36 @@ limitations under the License.
 """
 
 from abc import abstractmethod
+import logging
 
 import cvxpy as cvx
 import numpy as np
 import pandas as pd
 
 from .costs import BaseCost
+from .utils import values_in_time
+logger = logging.getLogger(__name__)
+
 
 __all__ = ['FullSigma', 'EmpSigma', 'SqrtSigma', 'WorstCaseRisk',
            'RobustFactorModelSigma', 'RobustSigma',  'FactorModelSigma']
 
 
-def locator(obj, t):
-    """Picks last element before t."""
-    try:
-        if isinstance(obj, pd.Panel):
-            return obj.iloc[obj.axes[0].get_loc(t, method='pad')]
+# def locator(obj, t):
+#     """Picks last element before t."""
+#     try:
+#         if isinstance(obj, pd.Panel):
+#             return obj.iloc[obj.axes[0].get_loc(t, method='pad')]
 
-        elif isinstance(obj.index, pd.MultiIndex):
-            prev_t = obj.loc[:t, :].index.values[-1][0]
-        else:
-            prev_t = obj.loc[:t, :].index.values[-1]
+#         elif isinstance(obj.index, pd.MultiIndex):
+#             prev_t = obj.loc[:t, :].index.values[-1][0]
+#         else:
+#             prev_t = obj.loc[:t, :].index.values[-1]
 
-        return obj.loc[prev_t, :]
+#         return obj.loc[prev_t, :]
 
-    except AttributeError:  # obj not pandas
-        return obj
+#     except AttributeError:  # obj not pandas
+#         return obj
 
 
 class BaseRiskModel(BaseCost):
@@ -111,10 +101,11 @@ class FullSigma(BaseRiskModel):
 
     def _estimate(self, t, wplus, z, value):
         try:
-            self.expression = cvx.quad_form(wplus, locator(self.Sigma, t))
+            self.expression = cvx.quad_form(
+                wplus, values_in_time(self.Sigma, t))
         except TypeError:
             self.expression = cvx.quad_form(
-                wplus, locator(self.Sigma, t).values)
+                wplus, values_in_time(self.Sigma, t).values)
         return self.expression
 
 
@@ -165,9 +156,9 @@ class FactorModelSigma(BaseRiskModel):
 
     def _estimate(self, t, wplus, z, value):
         self.expression = cvx.sum_squares(cvx.multiply(
-            np.sqrt(locator(self.idiosync, t).values), wplus)) + \
-            cvx.quad_form((wplus.T * locator(self.exposures, t).values.T).T,
-                          locator(self.factor_Sigma, t).values)
+            np.sqrt(values_in_time(self.idiosync, t)), wplus)) + \
+            cvx.quad_form((wplus.T * values_in_time(self.exposures, t).values.T).T,
+                          values_in_time(self.factor_Sigma, t).values)
         return self.expression
 
 
@@ -180,9 +171,9 @@ class RobustSigma(BaseRiskModel):
         super(RobustSigma, self).__init__(**kwargs)
 
     def _estimate(self, t, wplus, z, value):
-        self.expression = cvx.quad_form(wplus, locator(self.Sigma, t)) + \
-            locator(self.epsilon, t) * \
-            (cvx.abs(wplus).T * np.diag(locator(
+        self.expression = cvx.quad_form(wplus, values_in_time(self.Sigma, t)) + \
+            values_in_time(self.epsilon, t) * \
+            (cvx.abs(wplus).T * np.diag(values_in_time(
                 self.Sigma, t)))**2
 
         return self.expression
@@ -203,10 +194,10 @@ class RobustFactorModelSigma(BaseRiskModel):
         super(RobustFactorModelSigma, self).__init__(**kwargs)
 
     def _estimate(self, t, wplus, z, value):
-        F = locator(self.exposures, t)
+        F = values_in_time(self.exposures, t)
         f = (wplus.T * F.T).T
-        Sigma_F = locator(self.factor_Sigma, t)
-        D = locator(self.idiosync, t)
+        Sigma_F = values_in_time(self.factor_Sigma, t)
+        D = values_in_time(self.idiosync, t)
         self.expression = cvx.sum_squares(
             cvx.multiply(np.sqrt(D), wplus)) + \
             cvx.quad_form(f, Sigma_F) + \

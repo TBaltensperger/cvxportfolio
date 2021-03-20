@@ -1,16 +1,17 @@
 `cvxportfolio`
 =============
+[![CVXportfolio on PyPI](https://img.shields.io/pypi/v/cvxportfolio.svg)](https://pypi.org/project/cvxportfolio/)
 [![Build Status](https://travis-ci.org/cvxgrp/cvxportfolio.png?branch=master)](https://travis-ci.org/cvxgrp/cvxportfolio)
 [![Coverage Status](https://coveralls.io/repos/github/cvxgrp/cvxportfolio/badge.svg?branch=master)](https://coveralls.io/github/cvxgrp/cvxportfolio?branch=master)
+[![Apache 2.0 License](https://img.shields.io/badge/License-APACHEv2-green.svg)](https://github.com/cvxgrp/cvxportfolio/blob/master/LICENSE)
 
-**An (outdated) documentation of the package is given at [cvxportfolio.org](http://www.cvxportfolio.org/).**
+**The documentation of the package is given at [cvxportfolio.org](http://www.cvxportfolio.org/).**
 
 `cvxportfolio` is a python library for portfolio optimization and simulation,
 based on the paper [Multi-Period Trading via Convex Optimization](https://web.stanford.edu/~boyd/papers/cvx_portfolio.html).
 It is written in Python, its major dependencies are [`cvxpy`](https://github.com/cvxgrp/cvxpy)
 and [`pandas`](https://github.com/pandas-dev/pandas).
 
-See the [examples](https://github.com/cvxgrp/cvxportfolio/tree/master/examples) for basic usage.
 
 If you wish to cite CVXPortfolio, please use:
 ```
@@ -31,24 +32,15 @@ If you wish to cite CVXPortfolio, please use:
 Installation
 ------------
 
-We provide `conda` (recommended) and `pip` packages. From scratch, do:
+To install the package:
+```
+pip install cvxportfolio
+```
 
-1. Install [Anaconda](https://docs.continuum.io/anaconda/install)
-2. Install `pandas`
+To test it:
+
 ```
-conda install pandas
-```
-3. Install `cvxpy` (if it doesn't work, follow instructions [here](http://www.cvxpy.org/install/index.html))
-```
-conda install -c conda-forge lapack
-conda install -c cvxgrp cvxpy
-```
-3. Install `cvxportfolio`
-```
-conda install -c cvxgrp cvxportfolio
-```
-4. Test the installation with `nose`
-```
-conda install nose
+pip install nose
 nosetests cvxportfolio
 ```
+
