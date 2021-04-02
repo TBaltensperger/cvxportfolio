@@ -350,7 +350,8 @@ class MultiPeriodOpt(SinglePeriodOpt):
             # range(self.lookahead_periods)]:
 
             #            tau = t + delta_t
-            z = cvx.Variable(*w.shape)
+            # z = cvx.Variable(*w.shape)
+            z = cvx.Variable(w.shape)
             wplus = w + z
             obj = self.return_forecast.weight_expr_ahead(t, tau, wplus)
 
