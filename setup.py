@@ -17,6 +17,10 @@ setup(
     install_requires=["pandas",
                       "numpy",
                       "matplotlib",
-                      "cvxpy>=1.0.6"],
+                      "cvxpy>=1.0.6",
+                      "quandl", 
+                      "multiprocess",
+                      "tables",
+                      "pandas_datareader"],
     use_2to3=True,
 )
